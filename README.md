@@ -24,7 +24,7 @@ The addon is located within an item record of an Atlas Product. It is found on t
 >*Options: Title, Author, Call Number, Catalog Number, Subject, ISBN, ISSN*
 >
 >**SearchPriorityList:** The fields that should be searched on, in order of search priority. Each field in the string will be checked for a valid corresponding search value in the request, and the first search type with a valid corresponding value will be used. Each search type must be separated by a comma.
->*Default: Catalog Number,Title,Author,Call Number*
+>*Default: Title, Author*
 >
 >**AutoRetrieveItems:** Defines whether or not the addon should automatically retrieve items related to a record being viewed. Disabling this setting can save the site on Alma API calls because it will only make a [Retrieve Holdings List](https://developers.exlibrisgroup.com/alma/apis/bibs/GET/gwPcGly021om4RTvtjbPleCklCGxeYAfEqJOcQOaLEvEGUPgvJFpUQ==/af2fb69d-64f4-42bc-bb05-d8a0ae56936e) call when the button is pressed.
 >
