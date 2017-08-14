@@ -185,6 +185,6 @@ Atlas welcomes developers to extend the addon with additional support. All pull 
 
 * **Utility.lua** - The Utility file is used for common lua functions.
 
-* **RegEx.lua** - Import's .NET's RegEx into lua.
+* **RegEx.lua** - Imports .NET's RegEx into lua.
 
 * **WebClient.lua** - Used for making web client requests.
