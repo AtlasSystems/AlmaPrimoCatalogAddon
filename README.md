@@ -2,6 +2,7 @@
 
 ## Versions
 **1.0 -** Initial release
+**1.1.0 -** Fix: Handling for invalid URL on iFrames
 
 ## Summary
 The addon is located within an item record of an Atlas Product. It is found on the `"Catalog Search"` tab. The addon takes information from the fields in the Atlas Product and searches the catalog in the configured ordered. When the item is found, one selects the desired holding in the *Item Grid* below the browser and clicks *Import*. The addon then makes the necessary API calls to the Alma API and imports the item's information into the Atlas Product.
@@ -32,7 +33,7 @@ The addon is located within an item record of an Atlas Product. It is found on t
 >
 >**AlmaAPIKey:** API key used for interacting with the Alma API.
 >
->**PrimoSiteCode:** The 4 digit code that identifies the site in Primo Deep Links.
+>**PrimoSiteCode:** The 4 digit code that identifies the site in Primo Deep Links. It is the code that follows the "vid=" in the Primo-Explorer URL.
 
 ## Buttons
 The buttons for the Alma Primo Catalog Search addon are located in the *"Catalog Search"* ribbon in the top left of the requests.

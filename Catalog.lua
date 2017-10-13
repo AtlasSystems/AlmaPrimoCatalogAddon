@@ -222,9 +222,11 @@ function GetMmsId(webPage)
             if(src ~= nil and src ~= "") then
                 log:DebugFormat("src = {0}", src);
                 local iframeContents = WebClient.GetRequest(src, {});
-                local mmsId = ExtractMmsIdFromIFrame(iframeContents);
-                if(mmsId ~= nil and mmsId ~= "") then
-                    return mmsId;
+                if iframeContents then
+                    local mmsId = ExtractMmsIdFromIFrame(iframeContents);
+                    if(mmsId ~= nil and mmsId ~= "") then
+                        return mmsId;
+                    end
                 end
             end
         end
