@@ -34,5 +34,28 @@ local function GetRequest(requestUrl, headers)
     end
 end
 
+local function ReadResponse( responseString )
+    if (responseString and #responseString > 0) then
+
+        local responseDocument = types["System.Xml.XmlDocument"]();
+
+        local documentLoaded, error = pcall(function ()
+            responseDocument:LoadXml(responseString);
+        end);
+
+        if (documentLoaded) then
+            return responseDocument;
+        else
+            log:InfoFormat("Unable to load response content as XML: {0}", error);
+            return nil;
+        end
+    else
+        log:Info("Unable to read response content");
+    end
+
+    return nil;
+end
+
 --Exports
 WebClient.GetRequest = GetRequest;
+WebClient.ReadResponse = ReadResponse;

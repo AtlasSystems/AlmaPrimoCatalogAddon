@@ -46,6 +46,8 @@ types["System.Drawing.Size"] = luanet.import_type("System.Drawing.Size");
 types["DevExpress.XtraBars.BarShortcut"] = luanet.import_type("DevExpress.XtraBars.BarShortcut");
 types["System.Windows.Forms.Shortcut"] = luanet.import_type("System.Windows.Forms.Shortcut");
 types["System.Windows.Forms.Keys"] = luanet.import_type("System.Windows.Forms.Keys");
+types["System.Windows.Forms.Cursor"] = luanet.import_type("System.Windows.Forms.Cursor");
+types["System.Windows.Forms.Cursors"] = luanet.import_type("System.Windows.Forms.Cursors");
 types["System.DBNull"] = luanet.import_type("System.DBNull");
 types["System.Windows.Forms.Application"] = luanet.import_type("System.Windows.Forms.Application");
 types["System.Xml.XmlDocument"] = luanet.import_type("System.Xml.XmlDocument");
@@ -54,6 +56,10 @@ types["log4net.LogManager"] = luanet.import_type("log4net.LogManager");
 local rootLogger = "AtlasSystems.Addons.AlmaPrimoCatalogSearch";
 local log = types["log4net.LogManager"].GetLogger(rootLogger);
 local product = types["System.Windows.Forms.Application"].ProductName;
+local cursor = types["System.Windows.Forms.Cursor"];
+local cursors = types["System.Windows.Forms.Cursors"];
+local watcherEnabled = false;
+local recordsLastRetrievedFrom = "";
 log:Debug("Finished creating types");
 
 function Init()
@@ -61,9 +67,11 @@ function Init()
 
     -- Create a form
     catalogSearchForm.Form = interfaceMngr:CreateForm(DataMapping.LabelName, DataMapping.LabelName);
+    log:DebugFormat("catalogSearchForm.Form = {0}", catalogSearchForm.Form);
 
     -- Add a browser
     catalogSearchForm.Browser = catalogSearchForm.Form:CreateBrowser(DataMapping.LabelName, "Catalog Search Browser", DataMapping.LabelName);
+    log:DebugFormat("catalogSearchForm.Browser = {0}", catalogSearchForm.Browser);
     -- Hide the text label
     catalogSearchForm.Browser.TextVisible = false;
     catalogSearchForm.Browser.WebBrowser.ScriptErrorsSuppressed = true;
@@ -109,7 +117,20 @@ function Init()
         log:Debug("Navigating to Catalog URL because AutoSearch is disabled");
         ShowCatalogHome();
     end
+end
 
+function StopRecordPageWatcher()
+    if watcherEnabled then
+        log:Info("Stopper Record Page Watcher");
+        catalogSearchForm.Browser:StopPageWatcher();
+    end
+
+    watcherEnabled = false;
+end
+
+function StartRecordPageWatcher()
+    watcherEnabled = true;
+    catalogSearchForm.Browser:StartPageWatcher(3000, 60000 * 5);
 end
 
 function InitializeRecordPageHandler()
@@ -203,6 +224,7 @@ function PerformSearch(autoSearch, searchType)
 end
 
 function GetMmsId(webPage)
+    cursor.Current = cursors.WaitCursor;
     log:Debug("Getting MMS ID...");
 
     if (webPage == nil) then
@@ -225,6 +247,7 @@ function GetMmsId(webPage)
                 if iframeContents then
                     local mmsId = ExtractMmsIdFromIFrame(iframeContents);
                     if(mmsId ~= nil and mmsId ~= "") then
+                        cursor.Current = cursors.Default;
                         return mmsId;
                     end
                 end
@@ -232,6 +255,7 @@ function GetMmsId(webPage)
         end
     end
 
+    cursor.Current = cursors.Default;
     return nil;
 end
 
@@ -255,19 +279,15 @@ end
 
 function IsRecordPageLoaded()
     log:Debug("Checking if Record Page is loaded");
-
-    -- Toggling off UI Elements before another record page can load
-    ToggleItemsUIElements(false);
-
-    local webPage = catalogSearchForm.Browser.WebBrowser.Document;
     local pageUrl = catalogSearchForm.Browser.WebBrowser.Url:ToString();
-    local mmsId = GetMmsId(catalogSearchForm.Browser.WebBrowser.Document);
-    local isRecordPage = mmsId ~= nil and mmsId ~= "";
+    local isRecordPage = RegEx.Match("fulldisplay\?", pageUrl).Length > 0;
 
     if isRecordPage then
         log:DebugFormat("Is a record page. {0}", pageUrl);
+        StartRecordPageWatcher();
     else
         log:DebugFormat("Is not a record page. {0}", pageUrl);
+        StopRecordPageWatcher();
         ToggleItemsUIElements(false);
     end
 
@@ -280,8 +300,6 @@ function RecordPageHandler()
 
     --Re-initialize the record page handler in case the user navigates away from a record page to search again
     InitializeRecordPageHandler();
-
-    return itemPageChanged;
 end
 
 function Truncate(value, size)
@@ -308,10 +326,16 @@ function ToggleItemsUIElements(enabled)
     if (enabled) then
         log:Debug("Enabling UI.");
         if (settings.AutoRetrieveItems) then
-            local hasRecords = RetrieveItems();
-            catalogSearchForm.Grid.GridControl.Enabled = hasRecords;
+            -- Prevents the addon from rerunning RetrieveItems on the same page
+            if (catalogSearchForm.Browser.WebBrowser.Url:ToString() ~= recordsLastRetrievedFrom) then
+                -- Sets the recordsLastRetrievedFrom to the current page
+                local hasRecords = RetrieveItems();
+                recordsLastRetrievedFrom = catalogSearchForm.Browser.WebBrowser.Url:ToString();
+                catalogSearchForm.Grid.GridControl.Enabled = hasRecords;
+            end
         else
             catalogSearchForm.ItemsButton.BarButton.Enabled = true;
+            recordsLastRetrievedFrom = "";
             -- If there's an item in the Item Grid
             if(catalogSearchForm.Grid.GridControl.MainView.FocusedRowHandle > -1) then
                 catalogSearchForm.Grid.GridControl.Enabled = true;
@@ -409,31 +433,36 @@ function ItemsGridFocusedRowChanged(sender, args)
 end
 
 function RetrieveItems()
+    cursor.Current = cursors.WaitCursor;
     local mmsId = GetMmsId(catalogSearchForm.Browser.WebBrowser.Document);
     local apiKey = settings.AlmaApiKey;
     local apiUrl = settings.AlmaApiUrl;
+    if mmsId then
+        -- Cache the response if it hasn't been cached
+        if (itemsXmlDocCache[mmsId] == nil) then
+            log:DebugFormat("Caching {0}", mmsId);
+            itemsXmlDocCache[mmsId] = AlmaApi.RetrieveHoldingsList(mmsId);
+        end
 
--- Cache the response if it hasn't been cached
-    if (itemsXmlDocCache[mmsId] == nil) then
-        log:DebugFormat("Caching {0}", mmsId);
-        itemsXmlDocCache[mmsId] = AlmaApi.RetrieveHoldingsList(mmsId);
-    end
+        local response = itemsXmlDocCache[mmsId];
 
-    local response = itemsXmlDocCache[mmsId];
+        -- Check if it has any items available
+        local totalRecordCount = tonumber(response:SelectSingleNode("holdings/@total_record_count").Value);
+        log:DebugFormat("Records Available: {0}", totalRecordCount);
 
-    -- Check if it has any items available
-    local totalRecordCount = tonumber(response:SelectSingleNode("holdings/@total_record_count").Value);
-    log:DebugFormat("Records Available: {0}", totalRecordCount);
+        local hasRecords = totalRecordCount > 0;
+        if (hasRecords) then
+            -- Fill out Holdings Grid if there are items available
+            PopulateItemsDataSources( response, mmsId )
+        else
+            ClearItems();
+        end;
 
-    local hasRecords = totalRecordCount > 0;
-    if (hasRecords) then
-        -- Fill out Holdings Grid if there are items available
-        PopulateItemsDataSources( response, mmsId )
+        cursor.Current = cursors.Default;
+        return hasRecords;
     else
-        ClearItems();
-    end;
-
-    return hasRecords;
+        return false;
+    end
 end
 
 function CreateItemsTable()
@@ -465,26 +494,11 @@ function BuildItemsDataSource(holdingsXmlDoc, mmsId)
         local itemNode = itemNodes:Item(i);
         log:DebugFormat("itemNode = {0}", itemNode.OuterXml);
 
-        itemRow:set_Item("ReferenceNumber", mmsId);
-        log:DebugFormat("Reference Number = {0}", mmsId);
-
-        itemRow:set_Item("HoldingId", itemNode["holding_id"].InnerXml);
-        log:DebugFormat("HoldingId = {0}", itemNode["holding_id"].InnerXml);
-
-        -- If the location isn't specified in the Customized Mapping, use the location code
-        if(CustomizedMapping.Locations[itemNode["location"].InnerXml] ~= nil and CustomizedMapping.Locations[itemNode["location"].InnerXml] ~= "") then
-            itemRow:set_Item("Location", CustomizedMapping.Locations[itemNode["location"].InnerXml]);
-            log:DebugFormat("Location = {0}", CustomizedMapping.Locations[itemNode["location"].InnerXml]);
-        else
-            itemRow:set_Item("Location", itemNode["location"].InnerXml);
-            log:DebugFormat("Location = {0}", itemNode["location"].InnerXml);
-        end
-
-        itemRow:set_Item("Library", itemNode["library"].InnerXml);
-        log:DebugFormat("Library = {0}", itemNode["library"].InnerXml);
-
-        itemRow:set_Item("CallNumber", itemNode["call_number"].InnerXml);
-        log:DebugFormat("CallNumber = {0}", itemNode["call_number"].InnerXml);
+        itemRow = setItemNode(itemRow, mmsId, "ReferenceNumber");
+        itemRow = setItemNodeFromXML(itemRow, itemNode["holding_id"], "HoldingId");
+        itemRow = setItemNodeFromCustomizedMapping(itemRow, itemNode["location"], "Location", CustomizedMapping.Locations);
+        itemRow = setItemNodeFromXML(itemRow, itemNode["library"], "Library");
+        itemRow = setItemNodeFromXML(itemRow, itemNode["call_number"], "CallNumber");
 
         itemsDataTable.Rows:Add(itemRow);
     end
@@ -492,15 +506,54 @@ function BuildItemsDataSource(holdingsXmlDoc, mmsId)
     return itemsDataTable;
 end
 
+function setItemNodeFromCustomizedMapping(itemRow, itemNode, aeonField, mappings)
+    if(itemNode) then
+        if(mappings[itemNode.InnerXml] and mappings[itemNode.InnerXml] ~= "") then
+            itemRow = setItemNode(itemRow, mappings[itemNode.InnerXml], aeonField);
+        else
+            log:DebugFormat("Mapping NOT found for {0}. Setting row to innerXML.", aeonField, itemNode.InnerXml);
+            itemRow = setItemNode(itemRow, itemNode.InnerXml, aeonField);
+        end
+        return itemRow;
+    else
+        log:DebugFormat("Cannot set {0}. Item Node is Nil", aeonField);
+        return itemRow;
+    end
+end
+
+function setItemNodeFromXML(itemRow, itemNode, aeonField)
+    if(itemNode) then
+        return setItemNode(itemRow, itemNode.InnerXml, aeonField);
+    else
+        log:DebugFormat("Cannot set {0}. Item Node is Nil", aeonField);
+        return itemRow;
+    end
+end
+
+function setItemNode(itemRow, data, aeonField)
+    local success, error = pcall(function()
+        itemRow:set_Item(aeonField, data);
+    end);
+
+    if success then
+        log:DebugFormat("Setting {0} to {1}", aeonField, data);
+    else
+        log:DebugFormat("Error setting {0} to {1}", aeonField, data);
+        log:ErrorFormat("Error: {0}", error);
+    end
+
+    return itemRow;
+end
+
 function PopulateItemsDataSources( response, mmsId )
-    log:DebugFormat("response type = {0}", response);
     catalogSearchForm.Grid.GridControl:BeginUpdate();
     catalogSearchForm.Grid.GridControl.DataSource = BuildItemsDataSource(response, mmsId);
     catalogSearchForm.Grid.GridControl:EndUpdate();
-    catalogSearchForm.Grid.GridControl:Focus();
 end
 
 function DoItemImport()
+    cursor.Current = cursors.WaitCursor;
+
     log:Debug("Performing Import");
 
     log:Debug("Retrieving import row.");
@@ -526,6 +579,7 @@ function DoItemImport()
         ImportField(target.Field, target.Value, target.MaxSize);
     end
 
+    cursor.Current = cursors.Default;
     log:Debug("Switching to the detail tab.");
     ExecuteCommand("SwitchTab", "Detail");
 end
