@@ -31,6 +31,7 @@ catalogSearchForm.SearchButtons["Subject"] = nil;
 catalogSearchForm.SearchButtons["ISBN"] = nil;
 catalogSearchForm.SearchButtons["ISSN"] = nil;
 
+local holdingsXmlDocCache = {};
 local itemsXmlDocCache = {};
 
 luanet.load_assembly("System.Data");
@@ -404,6 +405,14 @@ function BuildItemsGrid()
     gridColumn.OptionsColumn.ReadOnly = true;
 
     gridColumn = gridView.Columns:Add();
+    gridColumn.Caption = "Barcode";
+    gridColumn.FieldName = "Barcode";
+    gridColumn.Name = "gridColumnBarcode";
+    gridColumn.Visible = true;
+    gridColumn.VisibleIndex = 0;
+    gridColumn.OptionsColumn.ReadOnly = true;
+
+    gridColumn = gridView.Columns:Add();
     gridColumn.Caption = "Location Code";
     gridColumn.FieldName = "Library";
     gridColumn.Name = "gridColumnLibrary";
@@ -439,27 +448,42 @@ function RetrieveItems()
     local apiUrl = settings.AlmaApiUrl;
     if mmsId then
         -- Cache the response if it hasn't been cached
-        if (itemsXmlDocCache[mmsId] == nil) then
-            log:DebugFormat("Caching {0}", mmsId);
-            itemsXmlDocCache[mmsId] = AlmaApi.RetrieveHoldingsList(mmsId);
+        if (holdingsXmlDocCache[mmsId] == nil) then
+            log:DebugFormat("Caching Holdings For {0}", mmsId);
+            holdingsXmlDocCache[mmsId] = AlmaApi.RetrieveHoldingsList(mmsId);
         end
 
-        local response = itemsXmlDocCache[mmsId];
+        local holdingsResponse = holdingsXmlDocCache[mmsId];
 
-        -- Check if it has any items available
-        local totalRecordCount = tonumber(response:SelectSingleNode("holdings/@total_record_count").Value);
-        log:DebugFormat("Records Available: {0}", totalRecordCount);
+        -- Check if it has any holdings available
+        local totalHoldingCount = tonumber(holdingsResponse:SelectSingleNode("holdings/@total_record_count").Value);
+        log:DebugFormat("Records Available: {0}", totalHoldingCount);
 
-        local hasRecords = totalRecordCount > 0;
-        if (hasRecords) then
-            -- Fill out Holdings Grid if there are items available
-            PopulateItemsDataSources( response, mmsId )
+        local hasHoldings = totalHoldingCount > 0;
+        -- Retrieve Item Data if Holdings are available
+        if (hasHoldings) then
+            -- Get list of the holding ids
+            local holdingIds = GetHoldingIds(holdingsResponse);
+
+            -- Loop through the holding ids
+            for _, holdingId in ipairs(holdingIds) do
+                log:DebugFormat("Holding ID = {0}", holdingId);
+                -- Cache the response if it hasn't been cached
+                if (itemsXmlDocCache[holdingId] == nil) then
+                    log:DebugFormat("Caching Items For {0}", mmsId);
+                    itemsXmlDocCache[holdingId] = AlmaApi.RetrieveItemsList(mmsId, holdingId);
+                end
+
+                local itemsResponse = itemsXmlDocCache[holdingId];
+
+                PopulateItemsDataSources( itemsResponse );
+            end
         else
             ClearItems();
         end;
 
         cursor.Current = cursors.Default;
-        return hasRecords;
+        return hasHoldings;
     else
         return false;
     end
@@ -469,6 +493,7 @@ function CreateItemsTable()
     local itemsTable = types["System.Data.DataTable"]();
 
     itemsTable.Columns:Add("ReferenceNumber");
+    itemsTable.Columns:Add("Barcode");
     itemsTable.Columns:Add("HoldingId");
     itemsTable.Columns:Add("Library");
     itemsTable.Columns:Add("Location");
@@ -483,27 +508,44 @@ function ClearItems()
     catalogSearchForm.Grid.GridControl:EndUpdate();
 end
 
-function BuildItemsDataSource(holdingsXmlDoc, mmsId)
-    local itemsDataTable = CreateItemsTable();
-
-    local itemNodes = holdingsXmlDoc:GetElementsByTagName("holding");
-    log:DebugFormat("Holding nodes found: {0}", itemNodes.Count);
+function GetItemRows(itemsXmlDoc, itemsDataTable)
+    local itemNodes = itemsXmlDoc:GetElementsByTagName("item");
+    local itemRows = {};
+    log:DebugFormat("Item nodes found: {0}", itemNodes.Count);
 
     for i = 0, itemNodes.Count - 1 do
         local itemRow = itemsDataTable:NewRow();
         local itemNode = itemNodes:Item(i);
+
+        local bibData = itemNode["bib_data"];
+        local holdingData = itemNode["holding_data"];
+        local itemData = itemNode["item_data"];
         log:DebugFormat("itemNode = {0}", itemNode.OuterXml);
 
-        itemRow = setItemNode(itemRow, mmsId, "ReferenceNumber");
-        itemRow = setItemNodeFromXML(itemRow, itemNode["holding_id"], "HoldingId");
-        itemRow = setItemNodeFromCustomizedMapping(itemRow, itemNode["location"], "Location", CustomizedMapping.Locations);
-        itemRow = setItemNodeFromXML(itemRow, itemNode["library"], "Library");
-        itemRow = setItemNodeFromXML(itemRow, itemNode["call_number"], "CallNumber");
+        itemRow = setItemNodeFromXML(itemRow, bibData["mms_id"], "ReferenceNumber");
+        itemRow = setItemNodeFromXML(itemRow, holdingData["holding_id"], "HoldingId");
+        itemRow = setItemNodeFromXML(itemRow, holdingData["call_number"], "CallNumber");
+        itemRow = setItemNodeFromCustomizedMapping(itemRow, itemData["location"], "Location", CustomizedMapping.Locations);
+        itemRow = setItemNodeFromXML(itemRow, itemData["library"], "Library");
+        itemRow = setItemNodeFromXML(itemRow, itemData["barcode"], "Barcode");
 
-        itemsDataTable.Rows:Add(itemRow);
+        table.insert(itemRows, itemRow);
     end
 
-    return itemsDataTable;
+    return itemRows;
+end
+
+function GetHoldingIds(holdingsXmlDoc)
+    local holdingNodes = holdingsXmlDoc:GetElementsByTagName("holding");
+    local holdingIds = {};
+    log:DebugFormat("Holding nodes found: {0}", holdingNodes.Count);
+
+    for i = 0, holdingNodes.Count - 1 do
+        local holdingNode = holdingNodes:Item(i);
+        table.insert(holdingIds, holdingNode["holding_id"].innerXML);
+    end
+
+    return holdingIds;
 end
 
 function setItemNodeFromCustomizedMapping(itemRow, itemNode, aeonField, mappings)
@@ -545,9 +587,16 @@ function setItemNode(itemRow, data, aeonField)
     return itemRow;
 end
 
-function PopulateItemsDataSources( response, mmsId )
+function PopulateItemsDataSources( response )
     catalogSearchForm.Grid.GridControl:BeginUpdate();
-    catalogSearchForm.Grid.GridControl.DataSource = BuildItemsDataSource(response, mmsId);
+    local itemsDataTable = CreateItemsTable();
+    local itemRows = GetItemRows(response, itemsDataTable);
+
+    for _, itemRow in ipairs(itemRows) do
+        itemsDataTable.Rows:Add(itemRow);
+    end
+
+    catalogSearchForm.Grid.GridControl.DataSource = itemsDataTable;
     catalogSearchForm.Grid.GridControl:EndUpdate();
 end
 
@@ -568,7 +617,7 @@ function DoItemImport()
     log:Debug("Updating the transaction object.");
 
     -- Import the Holdings Information
-    for _, target in ipairs(DataMapping.ImportFields.Holding[product]) do
+    for _, target in ipairs(DataMapping.ImportFields.Item[product]) do
         ImportField(target.Field, importRow:get_Item(target.Value), target.MaxSize);
     end
 

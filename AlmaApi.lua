@@ -28,7 +28,7 @@ end
 
 local function RetrieveBibs( mmsId )
     local requestUrl = AlmaApiInternal.ApiUrl .. "bibs?apikey="..
-         Utility.URLEncode(AlmaApiInternal.ApiKey) .. "&mms_id=" .. Utility.URLEncode(mmsId);
+        Utility.URLEncode(AlmaApiInternal.ApiKey) .. "&mms_id=" .. Utility.URLEncode(mmsId);
     local headers = {"Accept: application/xml", "Content-Type: application/xml"};
     log:DebugFormat("Request URL: {0}", requestUrl);
 
@@ -38,6 +38,21 @@ local function RetrieveBibs( mmsId )
     return WebClient.ReadResponse(response);
 end
 
+local function RetrieveItemsList( mmsId, hodingId )
+    local requestUrl = AlmaApiInternal.ApiUrl .."bibs/"..
+        Utility.URLEncode(mmsId) .."/holdings/" .. Utility.URLEncode(hodingId) .. "/items?apikey=" ..
+        Utility.URLEncode(AlmaApiInternal.ApiKey);
+
+    local headers = {"Accept: application/xml", "Content-Type: application/xml"};
+
+    log:DebugFormat("Request URL: {0}", requestUrl);
+    local response = WebClient.GetRequest(requestUrl, headers);
+    log:DebugFormat("response = {0}", response);
+
+    return WebClient.ReadResponse(response);
+end
+
 -- Exports
 AlmaApi.RetrieveHoldingsList = RetrieveHoldingsList;
 AlmaApi.RetrieveBibs = RetrieveBibs;
+AlmaApi.RetrieveItemsList = RetrieveItemsList;

@@ -2,7 +2,7 @@
 <Configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <Name>Alma Primo Catalog Search</Name>
   <Author>Atlas Systems</Author>
-  <Version>1.2.1</Version>
+  <Version>1.3.0</Version>
   <Active>True</Active>
   <Type>Addon</Type>
   <Description>Catalog Search and Import Addon that uses Alma as the catalog and Primo as the discovery layer</Description>
@@ -38,7 +38,7 @@
       <Description>API key used for interacting with the Alma API.</Description>
     </Setting>
     <Setting name="PrimoSiteCode" value="" type="string">
-      <Description>The 4 digit code that identifies the site in Primo Deep Links.</Description>
+      <Description>The code that identifies the site in Primo Deep Links. Ex: vid={PrimoSiteCode}</Description>
     </Setting>
   </Settings>
   <Files>

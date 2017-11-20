@@ -4,7 +4,7 @@ DataMapping.SearchTypes = {};
 DataMapping.SourceFields = {};
 DataMapping.ImportFields = {};
 DataMapping.ImportFields.Bibliographic = {};
-DataMapping.ImportFields.Holding = {};
+DataMapping.ImportFields.Item = {};
 DataMapping.ImportFields.StaticHolding = {};
 
 --Typical Settings that shoudn't need user configuration
@@ -70,7 +70,7 @@ DataMapping.ImportFields.Bibliographic["Aeon"] = {
 };
 
 
-DataMapping.ImportFields.Holding["Aeon"] = {
+DataMapping.ImportFields.Item["Aeon"] = {
     {
         Field = "ReferenceNumber", MaxSize = 50,
         Value = "ReferenceNumber"
@@ -78,6 +78,10 @@ DataMapping.ImportFields.Holding["Aeon"] = {
     {
         Field = "CallNumber", MaxSize = 255,
         Value = "CallNumber"
+    },
+    {
+        Field = "ItemNumber", MaxSize = 255,
+        Value = "Barcode"
     },
     {
         Field = "Location", MaxSize = 255,

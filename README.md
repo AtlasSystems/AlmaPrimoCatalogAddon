@@ -7,6 +7,8 @@
 
 **1.2.0 -** *Fix:* Handling for incomplete records. *Enhancement:* Performance improvement. Added "Wait" cursor to indicate longer processes.
 
+**1.3.0 -** *Ehancement:* Added barcode importing.
+
 ## Summary
 The addon is located within an item record of an Atlas Product. It is found on the `"Catalog Search"` tab. The addon takes information from the fields in the Atlas Product and searches the catalog in the configured ordered. When the item is found, one selects the desired holding in the *Item Grid* below the browser and clicks *Import*. The addon then makes the necessary API calls to the Alma API and imports the item's information into the Atlas Product.
 
@@ -36,7 +38,7 @@ The addon is located within an item record of an Atlas Product. It is found on t
 >
 >**AlmaAPIKey:** API key used for interacting with the Alma API.
 >
->**PrimoSiteCode:** The 4 digit code that identifies the site in Primo Deep Links.
+>**PrimoSiteCode:** The code that identifies the site in Primo Deep Links. Ex: vid={PrimoSiteCode}
 
 ## Buttons
 The buttons for the Alma Primo Catalog Search addon are located in the *"Catalog Search"* ribbon in the top left of the requests.
@@ -73,15 +75,15 @@ The search URL is being constructed using the formula below.
 
 *Default Configuration:*
 
-| Search Type                               | Query String                          |
-| ----------------------------------------- | ------------------------------------- |
-| DataMapping.SearchTypes["Title"]          | `title`       |
-| DataMapping.SearchTypes["Author"]         | `creator`      |
-| DataMapping.SearchTypes["Call Number"]    | `lsr01` |
-| DataMapping.SearchTypes["Subject"]    | `sub` |
-| DataMapping.SearchTypes["ISBN"]    | `isbn` |
-| DataMapping.SearchTypes["ISSN"]    | `issn` |
-| DataMapping.SearchTypes["Catalog Number"]    | `any` |
+|                Search Type                | Query String |
+| ----------------------------------------- | ------------ |
+| DataMapping.SearchTypes["Title"]          | `title`      |
+| DataMapping.SearchTypes["Author"]         | `creator`    |
+| DataMapping.SearchTypes["Call Number"]    | `lsr01`      |
+| DataMapping.SearchTypes["Subject"]        | `sub`        |
+| DataMapping.SearchTypes["ISBN"]           | `isbn`       |
+| DataMapping.SearchTypes["ISSN"]           | `issn`       |
+| DataMapping.SearchTypes["Catalog Number"] | `any`        |
 
 >**Note:** The *Catalog Number* search type performs an `any` search because Primo does not have a search type for MMS ID.
 
@@ -92,12 +94,13 @@ The field that the addon reads from to perform the search.
 
 *Default Configuration:*
 
-| Field                                              | Source Field      |
+|                       Field                        |   Source Field    |
 | -------------------------------------------------- | ----------------- |
 | DataMapping.SourceFields["Aeon"]["Title"]          | `ItemTitle`       |
 | DataMapping.SourceFields["Aeon"]["Author"]         | `ItemAuthor`      |
 | DataMapping.SourceFields["Aeon"]["Call Number"]    | `CallNumber`      |
 | DataMapping.SourceFields["Aeon"]["Catalog Number"] | `ReferenceNumber` |
+| DataMapping.SourceFields["Aeon"]["Barcode"]        | `ItemNumber`      |
 
 ### Bibliographic Import
 The information within this data mapping is used to perform the bibliographic api call. The `Field` is the product field that the data will be imported into, `MaxSize` is the maximum character size the data going into the product field can be, and `Value` is the xPath query to the information.
@@ -110,15 +113,16 @@ The information within this data mapping is used to perform the bibliographic ap
 >//datafield[@tag='110']/subfield[@code='a']|//datafield[@tag='110']/subfield[@code='b']
 >```
 
-### Holding Import
+### Item Import
 The information within this data mapping is used import the correct information from the items grid. The `Field` is the product field that the data will be imported into, `MaxSize` is the maximum character size the data going into the product field can be, and `Value` is the FieldName of the column within the item grid.
 
-| Product Field   | Value           | Alma API XML Node | Description                                    |
+|  Product Field  |      Value      | Alma API XML Node |                  Description                   |
 | --------------- | --------------- | ----------------- | ---------------------------------------------- |
 | ReferenceNumber | ReferenceNumber | mms_id            | The catalog identifier for the record (MMS ID) |
 | CallNumber      | CallNumber      | call_number       | The item's call number                         |
 | Location        | Location        | location          | The location of the item                       |
 | Library         | Library         | library           | The library where the item is held             |
+| ItemNumber      | Barcode         | barcode           | The item's barcode                             |
 
 > **Note:** The Holding ID can also be imported by adding another table with a Value of `HoldingId`.
 
@@ -126,7 +130,7 @@ The information within this data mapping is used import the correct information 
 The `CustomizedMapping.lua` file contains the mappings to variables that are more site specific.
 
 ### Location Mapping
-Maps an item's location code to a full name. If a location mapping isn't given, the addon will display the location code. The location code is taken from the `location` node returned by a [Retrieve Holdings List](https://developers.exlibrisgroup.com/alma/apis/bibs/GET/gwPcGly021om4RTvtjbPleCklCGxeYAfEqJOcQOaLEvEGUPgvJFpUQ==/af2fb69d-64f4-42bc-bb05-d8a0ae56936e) API call.
+Maps an item's location code to a full name. If a location mapping isn't given, the addon will display the location code. The location code is taken from the `location` node returned by a [Retrieve Items List](https://developers.exlibrisgroup.com/alma/apis/xsd/rest_items.xsd?tags=GET) API call.
 
 ```lua
 CustomizedMapping.Locations["{Location Code }"] = "{Full Location Name}"
@@ -136,7 +140,7 @@ CustomizedMapping.Locations["{Location Code }"] = "{Full Location Name}"
 ## FAQ
 
 ### How to add or change what information is displayed in the item grid?
-There's more holdings information gathered than what is displayed in the item grid. If you wish to display or hide additional columns on the item grid, find the comment `-- Item Grid Column Settings` within the `BuildItemGrid()` function in the *Catalog.lua* file and change the `gridColumn.Visible` variable of the column you wish to modify.
+There's more item information gathered than what is displayed in the item grid. If you wish to display or hide additional columns on the item grid, find the comment `-- Item Grid Column Settings` within the `BuildItemGrid()` function in the *Catalog.lua* file and change the `gridColumn.Visible` variable of the column you wish to modify.
 
 ### How to modify what bibliographic information is imported?
 To import additional bibliographic fields, add another lua table to the `DataMapping.ImportFields.Bibliographic[{Product Name}]` mapping. To remove a record from the importing remove it from the lua table.
