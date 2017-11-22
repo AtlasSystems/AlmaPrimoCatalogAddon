@@ -346,6 +346,7 @@ function ToggleItemsUIElements(enabled)
     else
         log:Debug("Disabling UI.");
         ClearItems();
+        recordsLastRetrievedFrom = "";
         catalogSearchForm.Grid.GridControl.Enabled = false;
         catalogSearchForm.ImportButton.BarButton.Enabled = false;
 
@@ -416,13 +417,21 @@ function BuildItemsGrid()
     gridColumn.Caption = "Location Code";
     gridColumn.FieldName = "Library";
     gridColumn.Name = "gridColumnLibrary";
-    gridColumn.Visible = false;
+    gridColumn.Visible = true;
     gridColumn.OptionsColumn.ReadOnly = true;
 
     gridColumn = gridView.Columns:Add();
     gridColumn.Caption = "Call Number";
     gridColumn.FieldName = "CallNumber";
     gridColumn.Name = "gridColumnCallNumber";
+    gridColumn.Visible = true;
+    gridColumn.VisibleIndex = 1;
+    gridColumn.OptionsColumn.ReadOnly = true;
+
+    gridColumn = gridView.Columns:Add();
+    gridColumn.Caption = "Item Description";
+    gridColumn.FieldName = "Description";
+    gridColumn.Name = "gridColumnDescription";
     gridColumn.Visible = true;
     gridColumn.VisibleIndex = 1;
     gridColumn.OptionsColumn.ReadOnly = true;
@@ -465,7 +474,9 @@ function RetrieveItems()
             -- Get list of the holding ids
             local holdingIds = GetHoldingIds(holdingsResponse);
 
-            -- Loop through the holding ids
+            -- Create a new Item Data Table to Populate
+            local itemsDataTable = CreateItemsTable();
+
             for _, holdingId in ipairs(holdingIds) do
                 log:DebugFormat("Holding ID = {0}", holdingId);
                 -- Cache the response if it hasn't been cached
@@ -476,7 +487,7 @@ function RetrieveItems()
 
                 local itemsResponse = itemsXmlDocCache[holdingId];
 
-                PopulateItemsDataSources( itemsResponse );
+                PopulateItemsDataSources( itemsResponse, itemsDataTable );
             end
         else
             ClearItems();
@@ -498,6 +509,7 @@ function CreateItemsTable()
     itemsTable.Columns:Add("Library");
     itemsTable.Columns:Add("Location");
     itemsTable.Columns:Add("CallNumber");
+    itemsTable.Columns:Add("Description");
 
     return itemsTable;
 end
@@ -506,33 +518,6 @@ function ClearItems()
     catalogSearchForm.Grid.GridControl:BeginUpdate();
     catalogSearchForm.Grid.GridControl.DataSource = CreateItemsTable();
     catalogSearchForm.Grid.GridControl:EndUpdate();
-end
-
-function GetItemRows(itemsXmlDoc, itemsDataTable)
-    local itemNodes = itemsXmlDoc:GetElementsByTagName("item");
-    local itemRows = {};
-    log:DebugFormat("Item nodes found: {0}", itemNodes.Count);
-
-    for i = 0, itemNodes.Count - 1 do
-        local itemRow = itemsDataTable:NewRow();
-        local itemNode = itemNodes:Item(i);
-
-        local bibData = itemNode["bib_data"];
-        local holdingData = itemNode["holding_data"];
-        local itemData = itemNode["item_data"];
-        log:DebugFormat("itemNode = {0}", itemNode.OuterXml);
-
-        itemRow = setItemNodeFromXML(itemRow, bibData["mms_id"], "ReferenceNumber");
-        itemRow = setItemNodeFromXML(itemRow, holdingData["holding_id"], "HoldingId");
-        itemRow = setItemNodeFromXML(itemRow, holdingData["call_number"], "CallNumber");
-        itemRow = setItemNodeFromCustomizedMapping(itemRow, itemData["location"], "Location", CustomizedMapping.Locations);
-        itemRow = setItemNodeFromXML(itemRow, itemData["library"], "Library");
-        itemRow = setItemNodeFromXML(itemRow, itemData["barcode"], "Barcode");
-
-        table.insert(itemRows, itemRow);
-    end
-
-    return itemRows;
 end
 
 function GetHoldingIds(holdingsXmlDoc)
@@ -587,12 +572,29 @@ function setItemNode(itemRow, data, aeonField)
     return itemRow;
 end
 
-function PopulateItemsDataSources( response )
+function PopulateItemsDataSources( response, itemsDataTable )
     catalogSearchForm.Grid.GridControl:BeginUpdate();
-    local itemsDataTable = CreateItemsTable();
-    local itemRows = GetItemRows(response, itemsDataTable);
 
-    for _, itemRow in ipairs(itemRows) do
+    local itemNodes = response:GetElementsByTagName("item");
+    log:DebugFormat("Item nodes found: {0}", itemNodes.Count);
+
+    for i = 0, itemNodes.Count - 1 do
+        local itemRow = itemsDataTable:NewRow();
+        local itemNode = itemNodes:Item(i);
+
+        local bibData = itemNode["bib_data"];
+        local holdingData = itemNode["holding_data"];
+        local itemData = itemNode["item_data"];
+        log:DebugFormat("itemNode = {0}", itemNode.OuterXml);
+
+        itemRow = setItemNodeFromXML(itemRow, bibData["mms_id"], "ReferenceNumber");
+        itemRow = setItemNodeFromXML(itemRow, holdingData["holding_id"], "HoldingId");
+        itemRow = setItemNodeFromXML(itemRow, holdingData["call_number"], "CallNumber");
+        itemRow = setItemNodeFromCustomizedMapping(itemRow, itemData["location"], "Location", CustomizedMapping.Locations);
+        itemRow = setItemNodeFromXML(itemRow, itemData["library"], "Library");
+        itemRow = setItemNodeFromXML(itemRow, itemData["barcode"], "Barcode");
+        itemRow = setItemNodeFromXML(itemRow, itemData["description"], "Description");
+
         itemsDataTable.Rows:Add(itemRow);
     end
 

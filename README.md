@@ -9,6 +9,8 @@
 
 **1.3.0 -** *Ehancement:* Added barcode importing.
 
+**1.4.0 -** *Fixes:* Fixed problem with holdings with many different items not being displayed. Fixed bug where item data grid was not being populated when one navigates off a record and then directly back to the same record.
+
 ## Summary
 The addon is located within an item record of an Atlas Product. It is found on the `"Catalog Search"` tab. The addon takes information from the fields in the Atlas Product and searches the catalog in the configured ordered. When the item is found, one selects the desired holding in the *Item Grid* below the browser and clicks *Import*. The addon then makes the necessary API calls to the Alma API and imports the item's information into the Atlas Product.
 
@@ -124,7 +126,7 @@ The information within this data mapping is used import the correct information 
 | Library         | Library         | library           | The library where the item is held             |
 | ItemNumber      | Barcode         | barcode           | The item's barcode                             |
 
-> **Note:** The Holding ID can also be imported by adding another table with a Value of `HoldingId`.
+> **Note:** The Holding ID and Item Description can also be imported by adding another table with a Value of `HoldingId` and `Description`.
 
 ## Customized Mapping
 The `CustomizedMapping.lua` file contains the mappings to variables that are more site specific.
