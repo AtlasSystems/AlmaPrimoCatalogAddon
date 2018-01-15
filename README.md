@@ -1,6 +1,7 @@
 # Alma Primo Catalog Search
 
 ## Versions
+
 **1.0 -** Initial release
 
 **1.1.0 -** *Fix:* Handling for invalid URL on iFrames
@@ -11,10 +12,15 @@
 
 **1.4.0 -** *Fixes:* Fixed problem with holdings with many different items not being displayed. Fixed bug where item data grid was not being populated when one navigates off a record and then directly back to the same record.
 
+**1.5.0 -** *Enhancement:* Removed inline references to Aeon's Transactions table. These references have been moved to the DataMapping.lua file. This will allow the addon to support Ares and ILLiad in the future. 
+
+
 ## Summary
+
 The addon is located within an item record of an Atlas Product. It is found on the `"Catalog Search"` tab. The addon takes information from the fields in the Atlas Product and searches the catalog in the configured ordered. When the item is found, one selects the desired holding in the *Item Grid* below the browser and clicks *Import*. The addon then makes the necessary API calls to the Alma API and imports the item's information into the Atlas Product.
 
 > **Note:** Only records with a valid MMS ID can be imported with this addon. An example of a record that may not have an MMS ID located within the Primo Page is a record coming from an online resource or external resource like HathiTrust.
+
 
 ## Settings
 
@@ -42,7 +48,9 @@ The addon is located within an item record of an Atlas Product. It is found on t
 >
 >**PrimoSiteCode:** The code that identifies the site in Primo Deep Links. Ex: vid={PrimoSiteCode}
 
+
 ## Buttons
+
 The buttons for the Alma Primo Catalog Search addon are located in the *"Catalog Search"* ribbon in the top left of the requests.
 
 >**Back:** Navigate back one page.
@@ -62,7 +70,9 @@ The buttons for the Alma Primo Catalog Search addon are located in the *"Catalog
 >
 >**Import:** Imports the selected record in the items grid.
 
+
 ## Data Mappings
+
 Below are the default configurations for the catalog addon. The mappings within `DataMappings.lua` are settings that typically do not have to be modified from site to site. However, these data mappings can be changed to customize the fields, search queries, and xPath queries to the data.
 
 >**Caution:** Be sure to backup the `DataMappings.lua` file before making modifications Incorrectly configured mappings may cause the addon to stop functioning correctly.
@@ -77,7 +87,7 @@ The search URL is being constructed using the formula below.
 
 *Default Configuration:*
 
-|                Search Type                | Query String |
+| Search Type                               | Query String |
 | ----------------------------------------- | ------------ |
 | DataMapping.SearchTypes["Title"]          | `title`      |
 | DataMapping.SearchTypes["Author"]         | `creator`    |
@@ -96,13 +106,14 @@ The field that the addon reads from to perform the search.
 
 *Default Configuration:*
 
-|                       Field                        |   Source Field    |
-| -------------------------------------------------- | ----------------- |
-| DataMapping.SourceFields["Aeon"]["Title"]          | `ItemTitle`       |
-| DataMapping.SourceFields["Aeon"]["Author"]         | `ItemAuthor`      |
-| DataMapping.SourceFields["Aeon"]["Call Number"]    | `CallNumber`      |
-| DataMapping.SourceFields["Aeon"]["Catalog Number"] | `ReferenceNumber` |
-| DataMapping.SourceFields["Aeon"]["Barcode"]        | `ItemNumber`      |
+| Field                                                 | Source Table  | Source Field        |
+| ----------------------------------------------------- | ------------- | ------------------- |
+| DataMapping.SourceFields["Aeon"]["Title"]             | `Transaction` | `ItemTitle`         |
+| DataMapping.SourceFields["Aeon"]["Author"]            | `Transaction` | `ItemAuthor`        |
+| DataMapping.SourceFields["Aeon"]["Call Number"]       | `Transaction` | `CallNumber`        |
+| DataMapping.SourceFields["Aeon"]["Catalog Number"]    | `Transaction` | `ReferenceNumber`   |
+| DataMapping.SourceFields["Aeon"]["Barcode"]           | `Transaction` | `ItemNumber`        |
+| DataMapping.SourceFields["Aeon"]["TransactionNumber"] | `Transaction` | `TransactionNumber` |
 
 ### Bibliographic Import
 The information within this data mapping is used to perform the bibliographic api call. The `Field` is the product field that the data will be imported into, `MaxSize` is the maximum character size the data going into the product field can be, and `Value` is the xPath query to the information.
@@ -118,7 +129,7 @@ The information within this data mapping is used to perform the bibliographic ap
 ### Item Import
 The information within this data mapping is used import the correct information from the items grid. The `Field` is the product field that the data will be imported into, `MaxSize` is the maximum character size the data going into the product field can be, and `Value` is the FieldName of the column within the item grid.
 
-|  Product Field  |      Value      | Alma API XML Node |                  Description                   |
+| Product Field   | Value           | Alma API XML Node | Description                                    |
 | --------------- | --------------- | ----------------- | ---------------------------------------------- |
 | ReferenceNumber | ReferenceNumber | mms_id            | The catalog identifier for the record (MMS ID) |
 | CallNumber      | CallNumber      | call_number       | The item's call number                         |
@@ -128,7 +139,9 @@ The information within this data mapping is used import the correct information 
 
 > **Note:** The Holding ID and Item Description can also be imported by adding another table with a Value of `HoldingId` and `Description`.
 
+
 ## Customized Mapping
+
 The `CustomizedMapping.lua` file contains the mappings to variables that are more site specific.
 
 ### Location Mapping
@@ -147,7 +160,7 @@ There's more item information gathered than what is displayed in the item grid. 
 ### How to modify what bibliographic information is imported?
 To import additional bibliographic fields, add another lua table to the `DataMapping.ImportFields.Bibliographic[{Product Name}]` mapping. To remove a record from the importing remove it from the lua table.
 
-The table takes a `Field` which is the product's field name, a `MaxSize` which is the maximum characters to be imported into the product, and `Value` which is the xPath query to the data returned by the [Retrieve Bibs](https://developers.exlibrisgroup.com/alma/apis/bibs/GET/gwPcGly021q2Z+qBbnVJzw==/af2fb69d-64f4-42bc-bb05-d8a0ae56936e) Alma API call.
+The table takes a `Table` and `Field` which correspond to a table and column name in the product, a `MaxSize` which is the maximum characters to be imported into the specified table column, and a `Value` which is the xPath query to the data returned by the [Retrieve Bibs](https://developers.exlibrisgroup.com/alma/apis/bibs/GET/gwPcGly021q2Z+qBbnVJzw==/af2fb69d-64f4-42bc-bb05-d8a0ae56936e) Alma API call.
 
 ### How to add a new Search Type?
 There are search types baked into the addon that are not enabled by default. The available search types are listed below.
@@ -175,6 +188,7 @@ Open up `Config.xml` and find *"AvailableSearchTypes"*. Add the *name* of the Se
 
 Finally, open Catalog.lua and find the commend that says `-- Search Functions`. Copy one of the search functions and paste it at the end of the search functions. Change the function's name to follow this formula; `Search{SearchTypeName}` (*Note: remove any spaces from the Search Type Name, but keep casing the same*). Within the PerformSearch method call, change the second parameter to be the Search Type Name (unmodified).
 
+
 ## Developers
 
 The addon is developed to support Alma Catalogs that use Primo as its discovery layer in [Aeon](https://www.atlas-sys.com/aeon/), [Ares](https://www.atlas-sys.com/ares), and [ILLiad](https://www.atlas-sys.com/illiad/).
@@ -198,3 +212,4 @@ Atlas welcomes developers to extend the addon with additional support. All pull 
 * **RegEx.lua** - Imports .NET's RegEx into lua.
 
 * **WebClient.lua** - Used for making web client requests.
+* 

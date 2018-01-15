@@ -110,7 +110,11 @@ function Init()
     AlmaApi.ApiKey = settings.AlmaApiKey;
 
     -- Search when opened if autoSearch is true
-    local transactionNumber = GetFieldValue("Transaction", "TransactionNumber");
+    local transactionNumber = GetFieldValue(
+        DataMapping.SourceFields[product]["TransactionNumber"].Table,
+        DataMapping.SourceFields[product]["TransactionNumber"].Field
+    );
+
     if ((settings.AutoSearch) and (transactionNumber) and (transactionNumber > 0)) then
         log:Debug("Performing AutoSearch");
         PerformSearch(true, nil);
@@ -174,14 +178,16 @@ end
 
 function GetAutoSearchType()
     local priorityList = settings.SearchPriorityList;
-    local fieldValue = nil;
 
-    for index = 1, #priorityList do
-        if DataMapping.SearchTypes[priorityList[index]] ~= nil and DataMapping.SourceFields[product][priorityList[index]] ~= nil then
-            fieldValue = GetFieldValue("Transaction", DataMapping.SourceFields[product][priorityList[index]]);
+    for _, searchType in ipairs(priorityList) do
+        if DataMapping.SearchTypes[searchType] and DataMapping.SourceFields[product][searchType] ~= nil then
+            
+            local fieldDefinition = DataMapping.SourceFields[product][searchType]
+            local fieldValue = GetFieldValue(fieldDefinition.Table, fieldDefinition.Field)
+
             log:DebugFormat("fieldValue = {0}", fieldValue);
             if fieldValue and fieldValue ~= "" then
-                return priorityList[index];
+                return searchType;
             end
         end
     end
@@ -209,7 +215,8 @@ function PerformSearch(autoSearch, searchType)
         end
     end
 
-    local searchTerm = GetFieldValue("Transaction", DataMapping.SourceFields[product][searchType]);
+    local fieldDefinition = DataMapping.SourceFields[product][searchType]
+    local searchTerm = GetFieldValue(fieldDefinition.Table, fieldDefinition.Field);
 
     if (searchTerm == nil) then
         searchTerm = "";
@@ -317,9 +324,9 @@ function Truncate(value, size)
     end
 end
 
-function ImportField(target, newFieldValue, targetSize)
-    if ((newFieldValue ~= nil) and (newFieldValue ~= "") and (newFieldValue ~= types["System.DBNull"].Value)) then
-        SetFieldValue("Transaction", target, Truncate(newFieldValue, targetSize));
+function ImportField(targetTable, targetField, newFieldValue, targetSize)
+    if (newFieldValue and (newFieldValue ~= "") and (newFieldValue ~= types["System.DBNull"].Value)) then
+        SetFieldValue(targetTable, targetField, Truncate(newFieldValue, targetSize));
     end
 end
 
@@ -620,14 +627,14 @@ function DoItemImport()
 
     -- Import the Holdings Information
     for _, target in ipairs(DataMapping.ImportFields.Item[product]) do
-        ImportField(target.Field, importRow:get_Item(target.Value), target.MaxSize);
+        ImportField(target.Table, target.Field, importRow:get_Item(target.Value), target.MaxSize);
     end
 
     local bibliographicInformation = GetBibliographicInformation();
 
     for _, target in ipairs(bibliographicInformation) do
         log:DebugFormat("Importing {0}, {1}, {2}", target.Field, target.Value, target.MaxSize);
-        ImportField(target.Field, target.Value, target.MaxSize);
+        ImportField(target.Table, target.Field, target.Value, target.MaxSize);
     end
 
     cursor.Current = cursors.Default;
