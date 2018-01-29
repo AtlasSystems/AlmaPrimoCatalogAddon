@@ -7,3 +7,8 @@ CustomizedMapping.Locations = {};
 
 -- Example Location Mapping:
 -- CustomizedMapping.Locations["finelock"] = "Fine Locked Case";
+
+CustomizedMapping.MmsIdRegex = "";
+
+-- Example Shared Site MmsIdRegex (Be sure to replace Primo Site Code in the "{}"): <lds\d\d>(?<mms_id>.*)\$\$I{Primo Site Code}<\/lds\d\d>
+-- Example Non-Shared Site MmsIdRegex: <addsrcrecordid>(?<mms_id>.*)<\/addsrcrecordid>
