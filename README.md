@@ -12,7 +12,9 @@
 
 **1.4.0 -** *Fixes:* Fixed problem with holdings with many different items not being displayed. Fixed bug where item data grid was not being populated when one navigates off a record and then directly back to the same record.
 
-**1.5.0 -** *Enhancement:* Removed inline references to Aeon's Transactions table. These references have been moved to the DataMapping.lua file. This will allow the addon to support Ares and ILLiad in the future. 
+**1.5.0 -** *Enhancement:* Removed inline references to Aeon's Transactions table. These references have been moved to the DataMapping.lua file. This will allow the addon to support Ares and ILLiad in the future.
+
+**1.6.0 -** *Fix:* Corrected Bib records not importing.
 
 
 ## Summary
@@ -212,4 +214,4 @@ Atlas welcomes developers to extend the addon with additional support. All pull 
 * **RegEx.lua** - Imports .NET's RegEx into lua.
 
 * **WebClient.lua** - Used for making web client requests.
-* 
+*
