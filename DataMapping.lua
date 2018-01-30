@@ -7,9 +7,14 @@ DataMapping.ImportFields.Bibliographic = {};
 DataMapping.ImportFields.Item = {};
 DataMapping.ImportFields.StaticHolding = {};
 
---Typical Settings that shouldn't need user configuration
+-- Backup this file before making changes. Incorrect changes may result
+-- in addon failure.
 DataMapping.LabelName = "Catalog Search";
-DataMapping.MmsIdRegex = '(?s)name="mmsId"[^>]*value="(?<mmsId>\\d*)';
+
+-- Example Shared Site MmsIdRegex (Be sure to replace Primo Site Code in the "{}"): <lds\d\d>(?<mms_id>.*)\$\$I{Primo Site Code}<\/lds\d\d>
+-- Example Non-Shared Site MmsIdRegex: <addsrcrecordid>(?<mms_id>.*)<\/addsrcrecordid>
+DataMapping.MmsIdRegex = "";
+
 
 -- Icons: Aeon
 DataMapping.Icons["Aeon"] = {};
@@ -27,7 +32,7 @@ DataMapping.SearchTypes["Subject"] = "sub";
 DataMapping.SearchTypes["ISBN"] = "isbn";
 DataMapping.SearchTypes["ISSN"] = "issn";
 
--- Catalog Number uses the Any search type because 
+-- Catalog Number uses the Any search type because
 -- Primo catalogs don't have built in MMS ID searching
 DataMapping.SearchTypes["Catalog Number"] = "any";
 
