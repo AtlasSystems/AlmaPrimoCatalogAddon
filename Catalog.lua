@@ -181,7 +181,7 @@ function GetAutoSearchType()
 
     for _, searchType in ipairs(priorityList) do
         if DataMapping.SearchTypes[searchType] and DataMapping.SourceFields[product][searchType] ~= nil then
-            
+
             local fieldDefinition = DataMapping.SourceFields[product][searchType]
             local fieldValue = GetFieldValue(fieldDefinition.Table, fieldDefinition.Field)
 
@@ -633,7 +633,7 @@ function DoItemImport()
     local bibliographicInformation = GetBibliographicInformation();
 
     for _, target in ipairs(bibliographicInformation) do
-        log:DebugFormat("Importing {0}, {1}, {2}", target.Field, target.Value, target.MaxSize);
+        log:DebugFormat("Importing {2} into {0}.{1}", target.Table, target.Field, target.Value);
         ImportField(target.Table, target.Field, target.Value, target.MaxSize);
     end
 
@@ -662,9 +662,10 @@ function GetBibliographicInformation()
 
             -- Loops through each Bibliographic mapping
             for _, target in ipairs(DataMapping.ImportFields.Bibliographic[product]) do
-                if (target and target.Field and target.Field ~= "") then
+                if (target and target.Field and target.Field ~= "" and target.Table and target.Table ~= "") then
                     log:DebugFormat("Value: {0}", target.Value);
-                    log:DebugFormat("Target: {0}", target.Field);
+                    log:DebugFormat("Field: {0}", target.Field);
+                    log:DebugFormat("Table: {0}", target.Table);
                     local marcSets = Utility.StringSplit(',', target.Value );
                     log:DebugFormat("marcSets.Count = {0}", #marcSets);
 
@@ -692,7 +693,11 @@ function GetBibliographicInformation()
                                 fieldValue = Utility.Trim(fieldValue);
                             end
 
-                            AddBibliographicInformation(bibliographicInformation, target.Field, fieldValue, target.MaxSize);
+                            local bibInfoEntry = {Table = target.Table, Field = target.Field, Value = fieldValue, MaxSize = target.MaxSize}
+
+                            log:DebugFormat("bibInfoEntry Table: {0}", target.Table);
+
+                            table.insert( bibliographicInformation, bibInfoEntry );
 
                             -- Need to break from MARC Set loop so the first record isn't overwritten
                             break;
@@ -704,9 +709,4 @@ function GetBibliographicInformation()
     end
 
     return bibliographicInformation;
-end
-
-function AddBibliographicInformation(bibliographicInformation, targetField, fieldValue, targetMaxSize)
-    local bibInfoEntry = {Field = targetField, Value = fieldValue, MaxSize = targetMaxSize}
-    table.insert( bibliographicInformation, bibInfoEntry );
 end
