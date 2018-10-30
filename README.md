@@ -14,6 +14,8 @@
 
 **1.5.0 -** *Enhancement:* Removed inline references to Aeon's Transactions table. These references have been moved to the DataMapping.lua file. This will allow the addon to support Ares and ILLiad in the future. 
 
+**1.5.1 -** *Fix:* Bibliographic information import
+
 
 ## Summary
 
