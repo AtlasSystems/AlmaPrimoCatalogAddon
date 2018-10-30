@@ -692,7 +692,7 @@ function GetBibliographicInformation()
                                 fieldValue = Utility.Trim(fieldValue);
                             end
 
-                            AddBibliographicInformation(bibliographicInformation, target.Field, fieldValue, target.MaxSize);
+                            AddBibliographicInformation(bibliographicInformation, target.Table, target.Field, fieldValue, target.MaxSize);
 
                             -- Need to break from MARC Set loop so the first record isn't overwritten
                             break;
@@ -706,7 +706,7 @@ function GetBibliographicInformation()
     return bibliographicInformation;
 end
 
-function AddBibliographicInformation(bibliographicInformation, targetField, fieldValue, targetMaxSize)
-    local bibInfoEntry = {Field = targetField, Value = fieldValue, MaxSize = targetMaxSize}
+function AddBibliographicInformation(bibliographicInformation, targetTable, targetField, fieldValue, targetMaxSize)
+    local bibInfoEntry = {Table = targetTable, Field = targetField, Value = fieldValue, MaxSize = targetMaxSize}
     table.insert( bibliographicInformation, bibInfoEntry );
 end
