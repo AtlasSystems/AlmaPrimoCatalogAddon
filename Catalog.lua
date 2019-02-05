@@ -135,7 +135,10 @@ end
 
 function StartRecordPageWatcher()
     watcherEnabled = true;
-    catalogSearchForm.Browser:StartPageWatcher(3000, 60000 * 5);
+
+    local checkIntervalMilliseconds = 3000; -- 3 seconds
+    local maxWatchTimeMilliseconds = 300000; -- 5 minutes
+    catalogSearchForm.Browser:StartPageWatcher(checkIntervalMilliseconds, maxWatchTimeMilliseconds);
 end
 
 function InitializeRecordPageHandler()
