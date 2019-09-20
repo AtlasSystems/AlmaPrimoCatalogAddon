@@ -16,6 +16,7 @@
 
 **1.5.1 -** *Fix:* Bibliographic information import
 
+**1.5.2 -** *Fix:* .NET 4.8 compatibility issue
 
 ## Summary
 

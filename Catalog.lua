@@ -248,8 +248,9 @@ function GetMmsId(webPage)
 
     if(iframes.Count > 0) then
         -- Loop through the list of iframes until we get an mms id
-        for i = 0, iframes.Count - 1 do
-            local iframe = iframes:get_Item(i);
+        local iframesEnumerator = iframes:GetEnumerator();
+        while iframesEnumerator:MoveNext() do
+            local iframe = iframesEnumerator.Current;
             local src = ExtractIFrameSrc(iframe);
 
             if(src ~= nil and src ~= "") then
